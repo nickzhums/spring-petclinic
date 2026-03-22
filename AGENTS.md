@@ -1,92 +1,83 @@
-# Spring PetClinic – AI Agent Guide
+# Spring PetClinic — Agent Guide
 
 ## Architecture Overview
 
-Spring Boot 4 / Java 17 MVC application with Thymeleaf templates. No service layer — controllers talk directly to Spring Data JPA repositories.
+Spring Boot 4 / Java 17 MVC application using Thymeleaf templates, Spring Data JPA, and a multi-database strategy. No service layer — controllers talk directly to repositories.
 
-**Package layout** (each domain owns its full vertical slice):
-```
-org.springframework.samples.petclinic
-├── model/         # Shared JPA base classes: BaseEntity, NamedEntity, Person
-├── owner/         # Owner, Pet, Visit, PetType + controllers + repos + formatter
-├── vet/           # Vet, Specialty + controller + repo (cached)
-└── system/        # CacheConfiguration, WelcomeController, CrashController, WebConfiguration
-```
+**Package layout** (`src/main/java/.../petclinic/`):
+- `model/` — JPA base classes only: `BaseEntity` (id), `NamedEntity` (name), `Person` (firstName/lastName)
+- `owner/` — domain + web for owners, pets, visits (all co-located in one package)
+- `vet/` — domain + web for vets and specialties
+- `system/` — `CacheConfiguration`, `WebConfiguration` (i18n), `WelcomeController`, `CrashController`
 
-**Entity hierarchy:** `BaseEntity` (id) → `NamedEntity` (name) → domain entities; `Person` (firstName, lastName) → `Owner`. All extend `BaseEntity`.
+**Data model**: `Owner` → `Pet[]` → `Visit[]` (cascade ALL, fetch EAGER). `Pet` has a `PetType` (via `types` table). `Vet` has `Specialty[]` (many-to-many via `vet_specialties`).
 
-**Key data relationships:**
-- `Owner` → `Pet` (OneToMany, EAGER, cascade ALL, JoinColumn `owner_id`)
-- `Pet` → `Visit` (OneToMany, EAGER, cascade ALL)
-- `Pet` → `PetType` (ManyToOne)
-- `Vet` → `Specialty` (ManyToMany)
+**REST dual exposure**: `VetController` serves both HTML (`/vets.html`) and JSON/XML (`/vets`) from the same controller method — no separate REST layer.
 
-## Database & Profiles
+## Databases & Profiles
 
-Default profile uses **H2 in-memory** — schema/data loaded from `src/main/resources/db/h2/`.
+Default profile uses in-memory **H2** (schema/data auto-loaded from `src/main/resources/db/h2/`). Switch with `spring.profiles.active`:
 
-Switch databases via Spring profile:
-- `spring.profiles.active=mysql` → `application-mysql.properties`, scripts from `db/mysql/`
-- `spring.profiles.active=postgres` → `application-postgres.properties`, scripts from `db/postgres/`
+| Profile | Datasource | SQL scripts |
+|---------|-----------|-------------|
+| *(default)* | H2 in-memory | `db/h2/` |
+| `mysql` | MySQL | `db/mysql/` |
+| `postgres` | PostgreSQL | `db/postgres/` |
 
-The `database` property in `application.properties` drives `spring.sql.init.*-locations` using `classpath*:db/${database}/schema.sql` — always keep in sync when adding a new DB profile.
+Profile properties live in `application-mysql.properties` / `application-postgres.properties`. Env vars override: `MYSQL_URL`, `MYSQL_USER`, `MYSQL_PASS` / `POSTGRES_URL`, `POSTGRES_USER`, `POSTGRES_PASS`.
 
-`spring.jpa.hibernate.ddl-auto=none` — DDL is always managed by SQL init scripts, never by Hibernate.
+`spring.jpa.hibernate.ddl-auto=none` — the app **never** auto-generates DDL; SQL scripts are always the source of truth.
 
-## Build & Run
+## Key Developer Commands
 
 ```bash
-./mvnw spring-boot:run                   # H2 (default)
+# Run (H2, default)
+./mvnw spring-boot:run
+
+# Run tests (H2)
+./mvnw test
+
+# Recompile SCSS → CSS (required after any .scss edit)
+./mvnw package -P css
+
+# Build OCI container image (no Dockerfile needed)
+./mvnw spring-boot:build-image
+
+# Run with MySQL via Docker Compose
+docker compose up mysql
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=mysql
-
-./mvnw test                              # all tests
-./mvnw package -P css                    # recompile SCSS → petclinic.css (Maven only)
-./mvnw spring-boot:build-image           # OCI image (no Dockerfile needed)
-
-./gradlew bootRun                        # Gradle alternative
 ```
 
-**CSS:** Edit `src/main/scss/petclinic.scss`; the compiled output `src/main/resources/static/resources/css/petclinic.css` must be re-generated with `-P css`. Do not hand-edit the compiled CSS.
-
-## Code Style & Formatting
-
-- **spring-javaformat** enforces formatting on every `./mvnw validate` run. Apply fixes with: `./mvnw spring-javaformat:apply`
-- **nohttp-checkstyle** enforces HTTPS URLs project-wide. Config: `src/checkstyle/nohttp-checkstyle.xml`.
-- Field injection is not used — all dependencies are injected via constructor.
-- Controllers are package-private classes (no `public` modifier); only `PetTypeFormatter` and model classes are `public`.
+MySQL integration tests use **Testcontainers** (requires Docker); Postgres tests use **Docker Compose** (`docker-compose.yml`). Both are skipped automatically without Docker.
 
 ## Testing Patterns
 
-| Test class | Profile | DB mechanism |
-|---|---|---|
-| `PetClinicIntegrationTests` | default | H2 in-memory |
-| `MySqlIntegrationTests` | `mysql` | Testcontainers (`MySQLContainer`) — requires Docker; skipped without it |
-| `PostgresIntegrationTests` | `postgres` | Docker Compose (`spring-boot-docker-compose`) |
+- `PetClinicIntegrationTests` — full `@SpringBootTest` with H2; also has a `main()` for running as a dev app with DevTools.
+- `MySqlIntegrationTests` — `@ActiveProfiles("mysql")` + `@Testcontainers`; `@DisabledInNativeImage`.
+- `PostgresIntegrationTests` — uses `docker-compose.yml` service `postgres`.
+- Unit tests live under `src/test/java/.../owner/`, `vet/`, `system/`, `model/`.
 
-Use `PetClinicIntegrationTests` as the fast-feedback loop during development (no Docker needed). The MySQL/Postgres tests are annotated `@DisabledInNativeImage` and `@DisabledInAotMode`.
+## Code Conventions
 
-## Caching
-
-Only the `vets` cache exists, configured in `CacheConfiguration` via JCache/Caffeine. `VetRepository.findAll()` methods are annotated `@Cacheable("vets")`. If you add a new cacheable query, register the cache name in `CacheConfiguration.petclinicCacheConfigurationCustomizer()`.
-
-## Frontend
-
-Thymeleaf templates in `src/main/resources/templates/`. All pages use the `layout` fragment (`fragments/layout.html`) via `th:replace`. UI text is externalised in `src/main/resources/messages/messages*.properties` — use `#{key}` in templates; never hardcode UI strings.
-
-Frontend dependencies (Bootstrap 5, Font Awesome 4) are served via **WebJars** — no npm/node toolchain needed.
-
-## GraalVM Native Image
-
-`PetClinicRuntimeHints` registers resource patterns (`db/*`, `messages/*`) and serialisation types required for AOT compilation. Update this class whenever new resources or serialisable types are added.
+- **No service layer**: controllers inject repositories directly (e.g., `OwnerController(OwnerRepository owners)`).
+- **`@InitBinder` blocks `id`** in every controller — never bind `id` from form input.
+- **`@ModelAttribute` pre-loads entities** — `OwnerController.findOwner()` and `VisitController.loadPetWithVisit()` fetch from DB before every handler, throwing `IllegalArgumentException` on missing records (not 404).
+- **`PetTypeFormatter`** converts PetType name ↔ object for form binding; registered as a `@Component` (Spring auto-detects it).
+- **Validation messages** use message keys (e.g., `{telephone.invalid}`) resolved from `src/main/resources/messages/messages*.properties` (9 languages). Add new constraint messages there.
+- **Snake-case column naming**: `PhysicalNamingStrategySnakeCaseImpl` — Java fields map automatically (e.g., `birthDate` → `birth_date`).
+- **Caching**: only the `vets` cache exists, configured via JCache/Caffeine in `CacheConfiguration`. Add new caches there.
+- **i18n**: language switched via `?lang=de` URL param (see `WebConfiguration`); session-scoped.
+- **CSS**: edit `.scss` files under `src/main/scss/`, not the generated `petclinic.css` directly.
+- **Commits** require a `Signed-off-by` trailer (DCO).
 
 ## Key Files
 
 | Purpose | Path |
-|---|---|
-| DB init scripts | `src/main/resources/db/{h2,mysql,postgres}/` |
-| Profile properties | `src/main/resources/application-{mysql,postgres}.properties` |
-| Cache setup | `src/main/java/.../system/CacheConfiguration.java` |
-| AOT hints | `src/main/java/.../PetClinicRuntimeHints.java` |
-| SCSS source | `src/main/scss/petclinic.scss` |
-| K8s manifests | `k8s/db.yml`, `k8s/petclinic.yml` |
+|---------|------|
+| App entry point | `src/main/java/.../PetClinicApplication.java` |
+| GraalVM native hints | `src/main/java/.../PetClinicRuntimeHints.java` |
+| DB schema (H2) | `src/main/resources/db/h2/schema.sql` |
+| Cache config | `src/main/java/.../system/CacheConfiguration.java` |
+| i18n messages | `src/main/resources/messages/messages.properties` |
+| Thymeleaf layout | `src/main/resources/templates/fragments/layout.html` |
 

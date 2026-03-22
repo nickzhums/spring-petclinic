@@ -10,6 +10,15 @@
         "timeoutSec": 10
       }
     ],
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "echo \"Tool $(basename $GITPOD_TOOL_NAME) started: $(date)\" >> logs/tool.log",
+        "powershell": "Add-Content -Path logs/tool.log -Value \"Tool $(basename $GITPOD_TOOL_NAME) started: $(Get-Date)\"",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
     "errorOccurred": [
       {
         "type": "command",
