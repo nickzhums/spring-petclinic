@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "echo \"Session started: $(date)\" >> logs/session.log",
+        "powershell": "Add-Content -Path logs/session.log -Value \"Session started: $(Get-Date)\"",
+        "cwd": ".",
+        "timeoutSec": 10
+      }
+    ],
+    "errorOccurred": [
+      {
+        "type": "command",
+        "bash": "INPUT=$(cat); ERROR=$(echo \"$INPUT\" | jq -r '.error.message'); echo \"[Hook] Error occurred: $ERROR\"",
+        "powershell": "$input = [Console]::In.ReadToEnd() | ConvertFrom-Json; Write-Output \"[Hook] Error occurred: $($input.error.message)\"",
+        "timeoutSec": 10
+      }
+    ]
+  }
+}
+
