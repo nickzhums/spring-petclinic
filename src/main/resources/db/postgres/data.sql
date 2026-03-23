@@ -46,6 +46,16 @@ INSERT INTO pets (name, birth_date, type_id, owner_id) SELECT 'Mulligan', '1997-
 INSERT INTO pets (name, birth_date, type_id, owner_id) SELECT 'Freddy', '2000-03-09', 5, 9 WHERE NOT EXISTS (SELECT * FROM pets WHERE id=11);
 INSERT INTO pets (name, birth_date, type_id, owner_id) SELECT 'Lucky', '2000-06-24', 2, 10 WHERE NOT EXISTS (SELECT * FROM pets WHERE id=12);
 INSERT INTO pets (name, birth_date, type_id, owner_id) SELECT 'Sly', '2002-06-08', 1, 10 WHERE NOT EXISTS (SELECT * FROM pets WHERE id=13);
+INSERT INTO pets (name, birth_date, type_id, adoptable) VALUES ('Buddy', '2021-03-15', 2, TRUE);
+INSERT INTO pets (name, birth_date, type_id, adoptable) VALUES ('Cleo', '2020-07-22', 1, TRUE);
+INSERT INTO pets (name, birth_date, type_id, adoptable) VALUES ('Finn', '2022-01-10', 5, TRUE);
+INSERT INTO pets (name, birth_date, type_id, adoptable) VALUES ('Ginger', '2019-11-05', 1, TRUE);
+INSERT INTO pets (name, birth_date, type_id, adoptable) VALUES ('Milo', '2021-06-30', 2, TRUE);
+INSERT INTO pets (name, birth_date, type_id, adoptable) VALUES ('Nibbles', '2022-04-18', 6, TRUE);
+INSERT INTO pets (name, birth_date, type_id, adoptable) VALUES ('Oliver', '2020-09-14', 1, TRUE);
+INSERT INTO pets (name, birth_date, type_id, adoptable) VALUES ('Peanut', '2021-12-03', 6, TRUE);
+INSERT INTO pets (name, birth_date, type_id, adoptable) VALUES ('Rocky', '2022-02-25', 2, TRUE);
+INSERT INTO pets (name, birth_date, type_id, adoptable) VALUES ('Ziggy', '2020-05-11', 3, TRUE);
 
 INSERT INTO visits (pet_id, visit_date, description) SELECT 7, '2010-03-04', 'rabies shot' WHERE NOT EXISTS (SELECT * FROM visits WHERE id=1);
 INSERT INTO visits (pet_id, visit_date, description) SELECT 8, '2011-03-04', 'rabies shot' WHERE NOT EXISTS (SELECT * FROM visits WHERE id=2);

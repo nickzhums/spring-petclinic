@@ -59,6 +59,11 @@
             <span th:text="#{error}">Error</span>
           </li>
 
+          <li th:replace="~{::menuItem ('/adoptions','adoptions','adopt a pet','heart',#{adoptMe})}">
+            <span class="fa fa-heart" aria-hidden="true"></span>
+            <span th:text="#{adoptMe}">Adopt Me</span>
+          </li>
+
         </ul>
       </div>
     </div>
