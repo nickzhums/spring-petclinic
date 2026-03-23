@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+
+<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'adoptions')}">
+
+<body>
+
+  <h2 th:text="#{adoptionsTitle}">Adoptable Pets</h2>
+
+  <div th:if="${message}" class="alert alert-success alert-dismissible" id="success-message" role="alert">
+    <span class="fa fa-check-circle me-2" aria-hidden="true"></span>
+    <span th:text="${message}">Pet adopted successfully!</span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+  </div>
+
+  <div th:if="${pets.empty}" class="alert alert-info">
+    <span th:text="#{adoptionsEmpty}">No pets are currently available for adoption.</span>
+  </div>
+
+  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" th:unless="${pets.empty}">
+    <div class="col" th:each="pet : ${pets}">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">
+            <span class="fa fa-paw me-1" aria-hidden="true"></span>
+            <span th:text="${pet.name}">Pet Name</span>
+          </h5>
+          <p class="card-text">
+            <strong th:text="#{type}">Type</strong>:
+            <span th:text="${pet.type.name}">Type</span>
+          </p>
+          <p class="card-text">
+            <strong th:text="#{birthDate}">Birth Date</strong>:
+            <span th:text="${#temporals.format(pet.birthDate, 'yyyy-MM-dd')}">2020-01-01</span>
+          </p>
+        </div>
+        <div class="card-footer">
+          <form th:action="@{/adoptions/{petId}/adopt(petId=${pet.id})}" method="post">
+            <button type="submit" class="btn btn-success w-100">
+              <span class="fa fa-heart me-1" aria-hidden="true"></span>
+              <span th:text="#{adoptMe}">Adopt Me</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script th:inline="javascript">
+    /*<![CDATA[*/
+    (function () {
+      var msg = document.getElementById("success-message");
+      if (msg) {
+        setTimeout(function () { msg.style.display = "none"; }, 3000);
+      }
+    })();
+    /*]]>*/
+  </script>
+
+</body>
+
+</html>

@@ -53,6 +53,9 @@ public class Pet extends NamedEntity {
 	@JoinColumn(name = "type_id")
 	private PetType type;
 
+	@Column
+	private boolean adoptable;
+
 	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
 	@JoinColumn(name = "pet_id")
 	@OrderBy("date ASC")
@@ -72,6 +75,14 @@ public class Pet extends NamedEntity {
 
 	public void setType(PetType type) {
 		this.type = type;
+	}
+
+	public boolean isAdoptable() {
+		return this.adoptable;
+	}
+
+	public void setAdoptable(boolean adoptable) {
+		this.adoptable = adoptable;
 	}
 
 	public Collection<Visit> getVisits() {
